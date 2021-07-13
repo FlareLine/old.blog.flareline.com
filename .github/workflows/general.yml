@@ -1,0 +1,16 @@
+on:
+  push:
+
+jobs:
+  check-branch:
+    name: Check branch
+    runs-on: ubuntu-latest
+    if: github.ref != 'refs/heads/main'
+    steps:
+    - name: Checkout Source
+      uses: actions/checkout@v2
+    - name: Code test
+      run: |
+        npm install
+        npm run test
+        npm run build
