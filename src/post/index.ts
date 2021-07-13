@@ -21,32 +21,29 @@ export const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGat
 	const maybePathParams = Option.of(event.pathParameters);
 	const maybePostId = maybePathParams.flatMap(pathParams => Option.of(pathParams['postId']));
 
-	if(maybePostId.isSome()) {
-		return await fetch(client, dynamoTable, maybePostId.get());
-	} else {
-		// page(client);
-		return BadRequest('Paging not implemented.');
-	}
-}
+	if (maybePostId.isSome()) {
 
-const fetch = async (client: DynamoDB.DocumentClient, dynamoTable: string, postId: string): Promise<APIGatewayProxyResult> => {
-	const errorOrMaybePost = await FetchPost(client, dynamoTable, postId);
+		const postId = maybePostId.get();
+		const errorOrMaybePost = await FetchPost(client, dynamoTable, postId);
 
-	if(errorOrMaybePost.isLeft()) {
+		if (errorOrMaybePost.isLeft()) {
 
-		const error = errorOrMaybePost.getLeft();
-		console.log(`An error ocurred while retrieving post '${postId}' - ${error.toString()}`);
+			const error = errorOrMaybePost.getLeft();
+			console.log(`An error ocurred while retrieving post '${postId}' - ${error.toString()}`);
 
-		return InternalServerError('An error ocurred.');
-	}
+			return InternalServerError('An error ocurred.');
+		}
 
-	const maybePost = errorOrMaybePost.getRight();
+		const maybePost = errorOrMaybePost.getRight();
 
-	if(maybePost.isNone()) {
-		console.log(`No post found matching '${postId}'.`);
+		if (maybePost.isNone()) {
+			console.log(`No post found matching '${postId}'.`);
 
-		return BadRequest(`No post found.`);
+			return BadRequest('No post found.');
+		}
+
+		return Ok(maybePost.get());
 	}
 
-	return Ok('Post found.', maybePost.get());
+	return BadRequest('No post found.');
 }

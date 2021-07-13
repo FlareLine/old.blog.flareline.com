@@ -24,16 +24,22 @@ export class BlogService extends Construct {
 				name: 'id',
 				type: AttributeType.STRING,
 			},
-			sortKey: {
-				name: 'posted',
-				type: AttributeType.NUMBER,
+		});
+
+		const postHandler = new Function(this, 'BlogPostHandler', {
+			runtime: Runtime.NODEJS_14_X,
+			code: Code.fromBucket(functionAsset.bucket, functionAsset.s3ObjectKey),
+			handler: 'post/index.lambdaHandler',
+			memorySize: 256,
+			environment: {
+				DYNAMO_TABLE: contentTable.tableName,
 			},
 		});
 
-		const contentHandler = new Function(this, 'BlogContentHandler', {
+		const pageHandler = new Function(this, 'BlogPageHandler', {
 			runtime: Runtime.NODEJS_14_X,
 			code: Code.fromBucket(functionAsset.bucket, functionAsset.s3ObjectKey),
-			handler: 'content/index.lambdaHandler',
+			handler: 'page/index.lambdaHandler',
 			memorySize: 256,
 			environment: {
 				DYNAMO_TABLE: contentTable.tableName,
@@ -60,15 +66,18 @@ export class BlogService extends Construct {
 			},
 		});
 
-		functionBucket.grantReadWrite(contentHandler);
+		functionBucket.grantReadWrite(postHandler);
+		functionBucket.grantReadWrite(pageHandler);
 		functionBucket.grantReadWrite(createHandler);
 		functionBucket.grantReadWrite(updateHandler);
 
-		contentTable.grantReadData(contentHandler);
+		contentTable.grantReadData(postHandler);
+		contentTable.grantReadData(pageHandler);
 		contentTable.grantReadWriteData(createHandler);
 		contentTable.grantReadWriteData(updateHandler);
 
-		const contentIntegration = new LambdaIntegration(contentHandler, {});
+		const postIntegration = new LambdaIntegration(postHandler, {});
+		const pageIntegration = new LambdaIntegration(pageHandler, {});
 		const createIntegration = new LambdaIntegration(createHandler, {});
 		const updateIntegration = new LambdaIntegration(updateHandler, {});
 
@@ -97,16 +106,16 @@ export class BlogService extends Construct {
 			target: RecordTarget.fromAlias(new ApiGateway(api))
 		});
 
-		new RootEndpoint(this, 'BlogPageEndpoint', {
+		new Endpoint(this, 'BlogPostEndpoint', {
 			method: 'GET',
-			lambdaIntegration: contentIntegration,
+			path: '{postId}',
+			lambdaIntegration: postIntegration,
 			apiGateway: api,
 		});
 
-		new Endpoint(this, 'BlogGetEndpoint', {
+		new RootEndpoint(this, 'BlogPageEndpoint', {
 			method: 'GET',
-			path: '{postId}',
-			lambdaIntegration: contentIntegration,
+			lambdaIntegration: pageIntegration,
 			apiGateway: api,
 		});
 
