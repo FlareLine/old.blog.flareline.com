@@ -1,5 +1,4 @@
 import { DynamoDB } from 'aws-sdk';
-import * as uuid from 'uuid';
 import { left, right } from './either';
 import { ErrorOr, TryAsync } from './error';
 import { Page, Post, PostStub, PostSummary } from './model';
@@ -7,7 +6,8 @@ import { none, Option, some, somes } from './option';
 
 export const CreatePost = async (client: DynamoDB.DocumentClient, dynamoTable: string, stub: PostStub): Promise<ErrorOr<string>> => {
 
-	const id = uuid.v1();
+	const now = new Date();
+	const id = now.valueOf().toString()
 
 	const putParams: DynamoDB.DocumentClient.PutItemInput = {
 		TableName: dynamoTable,
@@ -77,7 +77,7 @@ export const PagePosts = async (client: DynamoDB.DocumentClient, dynamoTable: st
 
 	const scanOutput = errorOrScanResult.getRight();
 	const maybeScanResults = Option.of(scanOutput.Items);
-	const nextCursor = scanOutput.LastEvaluatedKey?.toString();
+	const nextCursor: string | undefined = scanOutput.LastEvaluatedKey?.id;
 
 	const maybePageResult: Option<Page<PostSummary>> = maybeScanResults
 		.map(
